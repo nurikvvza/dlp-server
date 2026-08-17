@@ -124,5 +124,18 @@ def download():
         return jsonify({"ok": False, "error": "Файлы не создались"}), 500
     return jsonify({"ok": True, "files": out, "title": vid})
 
+@app.route("/api/clean", methods=["POST"])
+def clean():
+    tkn = request.headers.get("X-Auth-Token", "")
+    if not token_ok(tkn):
+        return jsonify({"ok": False, "error": "Token invalid"}), 403
+    try:
+        for fn in os.listdir(FILES):
+            try: os.remove(os.path.join(FILES, fn))
+            except: pass
+        return jsonify({"ok": True, "cleaned": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
