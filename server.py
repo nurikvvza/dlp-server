@@ -1,5 +1,10 @@
-import os, re, uuid, subprocess, json, time
+import os, re, uuid, subprocess, json, time, shutil
 from flask import Flask, request, send_from_directory, send_file, jsonify
+
+# добавляем node в PATH (если есть, для JS-челленджей yt-dlp)
+_node = shutil.which("node")
+if _node:
+    os.environ["PATH"] = os.path.dirname(_node) + ":" + os.environ.get("PATH", "")
 
 app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
