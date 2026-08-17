@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>dlp — Скачиватель видео</title>
+<style>
+:root{
+  --bg:#0a0b10; --card:#15171f; --line:#262a36;
+  --red:#ff1a1a; --red2:#ff3b3b; --txt:#f2f4f8; --mut:#8b93a7;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{
+  background:radial-gradient(120% 80% at 50% -10%,#1a1417 0%,var(--bg) 60%);
+  color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;justify-content:center;min-height:100dvh;
+}
+.phone{
+  width:100%;max-width:430px;min-height:100dvh;display:flex;flex-direction:column;
+  background:var(--bg);position:relative;
+}
+.header{padding:22px 22px 10px;display:flex;align-items:center;gap:14px}
+.header svg{width:54px;height:54px;border-radius:14px;box-shadow:0 6px 22px #ff1a1a33;flex-shrink:0}
+.header h1{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--txt)}
+.header h1 span{color:var(--red)}
+.header p{font-size:12.5px;color:var(--mut);margin-top:2px}
+.hero{padding:8px 22px 4px}
+.hero .title{font-size:26px;font-weight:800;line-height:1.15;letter-spacing:-.6px}
+.hero .title b{color:var(--red)}
+.hero .sub{color:var(--mut);font-size:14px;margin-top:8px;line-height:1.5}
+.form{padding:22px;display:flex;flex-direction:column;gap:14px}
+.field{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px;display:flex;align-items:center;gap:8px;transition:.2s}
+.field:focus-within{border-color:var(--red);box-shadow:0 0 0 3px #ff1a1a22}
+.field .ic{width:40px;height:40px;display:grid;place-items:center;color:var(--mut);font-size:18px;flex-shrink:0}
+.field input{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-size:15px;padding:12px 8px 12px 0}
+.field input::placeholder{color:#5a6173}
+.btn{
+  border:none;cursor:pointer;border-radius:16px;padding:16px;font-size:16px;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,var(--red),var(--red2));
+  box-shadow:0 10px 30px #ff1a1a44;transition:.15s;display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;box-shadow:none}
+.opts{display:flex;gap:10px;padding:0 22px}
+.chip{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;font-size:13px;color:var(--mut);transition:.2s}
+.chip.on{color:var(--txt);border-color:var(--red);background:#ff1a1a14}
+.result{padding:14px 22px 20px;display:none;flex-direction:column;gap:12px}
+.result.show{display:flex}
+.card-r{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;gap:14px;align-items:center}
+.card-r .thumb{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#2a1417,#16181f);display:grid;place-items:center;font-size:26px;flex-shrink:0}
+.card-r .meta{flex:1;min-width:0}
+.card-r .meta .t{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-r .meta .s{font-size:12.5px;color:var(--mut);margin-top:3px}
+.bar{height:6px;border-radius:6px;background:#222632;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--red2));transition:width .3s}
+.dl-btn{
+  display:none;align-items:center;justify-content:center;gap:10px;width:100%;
+  border:none;cursor:pointer;text-decoration:none;border-radius:16px;padding:18px;
+  font-size:16px;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,var(--red),var(--red2));
+  box-shadow:0 8px 26px #ff1a1a55, 0 0 0 1px #ff1a1a22 inset;
+  animation:pulse 1.8s ease-in-out infinite;
+}
+.dl-btn.sub{background:linear-gradient(135deg,#ff5a3c,#ff1a1a)}
+.dl-btn:active{transform:scale(.97)}
+@keyframes pulse{
+  0%,100%{box-shadow:0 8px 26px #ff1a1a55, 0 0 0 1px #ff1a1a22 inset}
+  50%{box-shadow:0 8px 34px #ff1a1a99, 0 0 14px #ff1a1a66 inset}
+}
+.done-title{display:none;font-size:15px;font-weight:800;color:#fff;margin:4px 0 2px;align-items:center;gap:8px}
+.foot{padding:18px 22px 34px;text-align:center;margin-top:auto;font-size:13px;font-weight:700;color:var(--txt)}
+.foot a{color:var(--red);text-decoration:none;font-weight:800;text-shadow:0 0 10px #ff1a1a88,0 0 18px #ff1a1a44}
+.glow{position:fixed;inset:0;pointer-events:none;background:radial-gradient(60% 40% at 50% 0%,#ff1a1a10,transparent 70%);z-index:-1}
+.scrollbtn{
+  position:fixed;right:16px;width:46px;height:46px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;font-size:22px;font-weight:800;
+  box-shadow:0 6px 20px #ff1a1a66;cursor:pointer;z-index:50;display:grid;place-items:center;
+}
+.scrollbtn:active{transform:scale(.92)}
+#scrollUp{top:16px}
+#scrollDown{bottom:16px}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<button class="scrollbtn" id="scrollUp" aria-label="Вверх">↑</button>
+<button class="scrollbtn" id="scrollDown" aria-label="Вниз">↓</button>
+
+<div class="phone">
+  <div class="header">
+    <svg width="54" height="54" viewBox="0 0 512 512" style="border-radius:14px;box-shadow:0 6px 22px #ff1a1a33;flex-shrink:0" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b2b2b"/><stop offset="1" stop-color="#161616"/></linearGradient>
+        <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff2d2d"/><stop offset="1" stop-color="#ff0000"/></linearGradient>
+      </defs>
+      <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bg)"/>
+      <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="#ff1a1a" stroke-opacity="0.25" stroke-width="3"/>
+      <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M150 196 L210 268 L150 340"/><line x1="150" y1="372" x2="214" y2="372"/>
+      </g>
+      <text x="250" y="332" font-family="Arial,Helvetica,sans-serif" font-size="150" font-weight="700" font-style="italic" fill="url(#glow)" letter-spacing="-6" transform="skewX(-8)">dlp</text>
+    </svg>
+    <div>
+      <h1>dl<span>p</span> v2.0</h1>
+      <p>Скачиватель видео</p>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="title">Скачай <b>любое видео</b><br>за пару секунд</div>
+    <div class="sub">Вставь ссылку с YouTube — и получи видео с субтитрами прямо на телефон.</div>
+  </div>
+
+  <div class="form">
+    <div class="field">
+      <span class="ic">🔗</span>
+      <input id="url" type="text" inputmode="url" placeholder="https://youtube.com/shorts/..." autocomplete="off">
+    </div>
+    <div class="opts">
+      <div class="chip on" data-fmt="mp4">🎬 Видео MP4</div>
+      <div class="chip on" data-fmt="ru">📝 Субтитры RU</div>
+    </div>
+    <button class="btn" id="go">⬇ Скачать бесплатно</button>
+  </div>
+
+  <div class="result" id="res">
+    <div class="card-r">
+      <div class="thumb">🎞️</div>
+      <div class="meta">
+        <div class="t" id="r-title">Название видео…</div>
+        <div class="s" id="r-status">Подготовка…</div>
+      </div>
+      <div class="dl">⬇</div>
+    </div>
+    <div class="bar"><i id="r-bar"></i></div>
+    <div class="done-title" id="r-done">✅ Готово — нажми, чтобы скачать</div>
+    <a class="dl-btn" id="dl-video" download>⬇ СКАЧАТЬ ВИДЕОО (HD)</a>
+    <a class="dl-btn sub" id="dl-sub" download>⬇ СКАЧАТЬ СУБТИТРЫ RU</a>
+  </div>
+
+  <div class="foot">Сделано ❤ Разработчик <a id="tgLink" href="intent://resolve?domain=nurikvvza#Intent;scheme=tg;package=org.telegram.messenger;end">https://t.me/nurikvvza</a></div>
+</div>
+
+<script>
+// защита от старого кэша: если открыт старый мёртвый домен — уходим на актуальный
+if (location.hostname && location.hostname.includes('pages-circles-licenses-clean')) {
+  location.href = 'https://winner-fired-blvd-fee.trycloudflare.com/';
+}
+const BASE_URL = (window.location.origin && window.location.protocol.startsWith('http'))
+  ? window.location.origin
+  : 'https://winner-fired-blvd-fee.trycloudflare.com';
+
+const urlInput=document.getElementById('url');
+const goBtn=document.getElementById('go');
+const res=document.getElementById('res');
+const rTitle=document.getElementById('r-title');
+const rStatus=document.getElementById('r-status');
+const rBar=document.getElementById('r-bar');
+const rDone=document.getElementById('r-done');
+const dlVideo=document.getElementById('dl-video');
+const dlSub=document.getElementById('dl-sub');
+const scrollUp=document.getElementById('scrollUp');
+const scrollDown=document.getElementById('scrollDown');
+
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>c.classList.toggle('on'));
+});
+
+scrollUp.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+scrollDown.addEventListener('click',()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));
+
+// скрытый токен доступа (приложение подставляет само, поля нет)
+const TOK = 'dlp_secret_2024';
+
+document.getElementById('tgLink').addEventListener('click', function(e){
+  e.preventDefault();
+  window.location.href = 'intent://resolve?domain=nurikvvza#Intent;scheme=tg;package=org.telegram.messenger;end';
+  setTimeout(function(){
+    window.location.href = 'tg://resolve?domain=nurikvvza';
+  }, 800);
+});
+
+goBtn.addEventListener('click',async()=>{
+  const u=urlInput.value.trim();
+  if(!u){urlInput.focus();return;}
+  res.classList.add('show');
+  dlVideo.style.display='none';
+  dlSub.style.display='none';
+  rDone.style.display='none';
+  rTitle.textContent=u.length>38?u.slice(0,38)+'…':u;
+  rStatus.textContent='Отправляем на сервер yt-dlp…';
+  rBar.style.width='15%';
+  goBtn.disabled=true;
+  try{
+    const resp=await fetch(BASE_URL+'/api/download',{
+      method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOK},
+      body:JSON.stringify({url:u})
+    });
+    const data=await resp.json();
+    if(!data.ok){throw new Error(data.error||'Ошибка');}
+    rStatus.textContent='Готово ✓';
+    rBar.style.width='100%';
+    rDone.style.display='flex';
+    let v=null,s=null;
+    (data.files||[]).forEach(f=>{
+      if(f.type==='video') v=f;
+      else if(f.type==='subtitle') s=f;
+    });
+    if(v){ dlVideo.href=BASE_URL+v.url+'?t='+encodeURIComponent(TOK); dlVideo.setAttribute('download',v.name); dlVideo.style.display='flex'; }
+    if(s){ dlSub.href=BASE_URL+s.url+'?t='+encodeURIComponent(TOK); dlSub.setAttribute('download',s.name); dlSub.style.display='flex'; }
+    setTimeout(()=>dlVideo.scrollIntoView({behavior:'smooth',block:'center'}),300);
+  }catch(e){
+    rStatus.textContent='Ошибка: '+e.message;
+    rBar.style.width='100%';
+  }finally{
+    goBtn.disabled=false;
+  }
+});
+</script>
+</body>
+</html>
