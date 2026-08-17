@@ -48,26 +48,7 @@ def add_cors(resp):
 
 @app.route("/")
 def index():
-    try:
-        return send_file(os.path.join(ASSETS, "index.html"))
-    except Exception as e:
-        return f"ERROR in index(): {e}", 500
-
-@app.route("/debug")
-def debug():
-    import sys
-    info = {
-        "python": sys.version,
-        "YTDLP": YTDLP,
-        "YTDLP_exists": os.path.isfile(YTDLP),
-        "cookies": COOKIES,
-        "cookies_exists": os.path.isfile(COOKIES),
-        "ASSETS": ASSETS,
-        "index_exists": os.path.isfile(os.path.join(ASSETS, "index.html")),
-        "cwd": os.getcwd(),
-        "files_in_BASE": os.listdir(BASE) if os.path.isdir(BASE) else "NO BASE",
-    }
-    return jsonify(info)
+    return send_file(os.path.join(ASSETS, "index.html"))
 
 @app.route("/files/<path:name>")
 def files(name):
@@ -83,8 +64,12 @@ def files(name):
 def download():
     data = request.get_json(force=True, silent=True) or {}
     url = (data.get("url") or "").strip()
-    if not url or "youtube" not in url.lower():
-        return jsonify({"ok": False, "error": "Нужна ссылка на YouTube"}), 400
+    u = url.lower()
+    # разрешаем любые YouTube-ссылки: watch, shorts, youtu.be, live, nocookie и т.д.
+    is_yt = ("youtube.com" in u or "youtu.be" in u or "youtube-nocookie.com" in u
+             or "youtu" in u)
+    if not url or not is_yt:
+        return jsonify({"ok": False, "error": "Нужна ссылка на YouTube (watch, shorts, youtu.be)"}), 400
 
     tkn = request.headers.get("X-Auth-Token", "")
     if not token_ok(tkn):
