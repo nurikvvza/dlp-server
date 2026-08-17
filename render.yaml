@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dlp-server
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: AUTH_TOKEN
+        value: "dlp_secret_2024"
+    healthCheckPath: /
