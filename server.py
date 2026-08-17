@@ -1,10 +1,5 @@
-import os, re, uuid, subprocess, json, time, shutil
+import os, re, uuid, subprocess, json, time, sys
 from flask import Flask, request, send_from_directory, send_file, jsonify
-
-# добавляем node в PATH (если есть, для JS-челленджей yt-dlp)
-_node = shutil.which("node")
-if _node:
-    os.environ["PATH"] = os.path.dirname(_node) + ":" + os.environ.get("PATH", "")
 
 app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -13,7 +8,7 @@ ASSETS = os.path.join(ROOT, "android", "assets")   # index.html лежит ту�
 FILES = os.path.join(BASE, "files")
 os.makedirs(FILES, exist_ok=True)
 
-YTDLP = "/root/projects/yt-dlp-app/backend/.venv/bin/yt-dlp"
+YTDLP = os.path.join(os.path.dirname(sys.executable), "yt-dlp") if os.path.isfile(os.path.join(os.path.dirname(sys.executable), "yt-dlp")) else "yt-dlp"
 COOKIES = os.path.join(BASE, "cookies.txt")        # если есть — yt-dlp берёт куки
 TOKENS_FILE = os.path.join(BASE, "allowed_tokens.txt")
 AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "dlp_secret_2024")  # запасной мастер-токен
