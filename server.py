@@ -3,8 +3,8 @@ from flask import Flask, request, send_from_directory, send_file, jsonify
 
 app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(BASE)                       # yt-dlp-app/
-ASSETS = os.path.join(ROOT, "android", "assets")   # index.html лежит тут
+ROOT = BASE  # на Render всё в корне репо
+ASSETS = BASE  # index.html лежит рядом с server.py
 FILES = os.path.join(BASE, "files")
 os.makedirs(FILES, exist_ok=True)
 
