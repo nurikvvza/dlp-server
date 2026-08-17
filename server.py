@@ -48,7 +48,26 @@ def add_cors(resp):
 
 @app.route("/")
 def index():
-    return send_file(os.path.join(ASSETS, "index.html"))
+    try:
+        return send_file(os.path.join(ASSETS, "index.html"))
+    except Exception as e:
+        return f"ERROR in index(): {e}", 500
+
+@app.route("/debug")
+def debug():
+    import sys
+    info = {
+        "python": sys.version,
+        "YTDLP": YTDLP,
+        "YTDLP_exists": os.path.isfile(YTDLP),
+        "cookies": COOKIES,
+        "cookies_exists": os.path.isfile(COOKIES),
+        "ASSETS": ASSETS,
+        "index_exists": os.path.isfile(os.path.join(ASSETS, "index.html")),
+        "cwd": os.getcwd(),
+        "files_in_BASE": os.listdir(BASE) if os.path.isdir(BASE) else "NO BASE",
+    }
+    return jsonify(info)
 
 @app.route("/files/<path:name>")
 def files(name):
