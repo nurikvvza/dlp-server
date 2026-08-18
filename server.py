@@ -182,11 +182,14 @@ def download():
                 msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:120]}"
         if not video_ok:
             return jsonify({"ok": False, "error": msg, "detail": err}), 500
+    except subprocess.CalledProcessError as e:
+        err = (e.stderr or "")[:400]
+        return jsonify({"ok": False, "error": "Ошибка скачивания видео", "detail": err}), 500
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
     # 2) субтитры: ВСЕГДА пытаемся (чип в APK убран, кнопка показывается всегда)
-    subs_dbg = ""
+    subs_dbg = f"url_after_norm:{url}"
     srt_path = os.path.join(FILES, f"{vid}.srt")
     try:
         ok, reason = write_srt(vid, srt_path)
