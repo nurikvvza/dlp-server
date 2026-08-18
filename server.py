@@ -180,10 +180,10 @@ def download():
     video_ok = False
     try:
         subprocess.run(common + [
-            "-f", "best[height<=720][ext=mp4]/"
-                  "best[height<=720]/"
-                  "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
-                  "bestvideo[height<=720]+bestaudio",
+            "-f", "best[height>=720][ext=mp4]/"
+                  "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/"
+                  "bestvideo[height>=720]+bestaudio/"
+                  "best[height>=720]",
             "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
@@ -201,7 +201,7 @@ def download():
             tunnel = get_tunnel_url()
             fallback_ok = False
             last_err = ""
-            for attempt in range(4):
+            for attempt in range(2):
                 try:
                     req = urllib.request.Request(f"{tunnel}/video?vid={vid}")
                     with urllib.request.urlopen(req, timeout=600) as resp:
@@ -220,7 +220,7 @@ def download():
                 except Exception as ve:
                     last_err = f"tunnel_fail:{str(ve)[:150]}"
                 # ждём и пробуем заново (туннель мог сменить URL или локально yt-dlp временно упал)
-                _time.sleep(10)
+                _time.sleep(5)
                 tunnel = get_tunnel_url()
             if not fallback_ok:
                 msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {last_err[:160]}"
