@@ -14,16 +14,39 @@ COOKIES = os.path.join(BASE, "cookies.txt")        # если есть — yt-dl
 TOKENS_FILE = os.path.join(BASE, "allowed_tokens.txt")
 AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "dlp_secret_2024")  # запасной мастер-токен
 TUNNEL_URL_FILE = os.path.join(BASE, "tunnel_url.txt")
-DEFAULT_TUNNEL = os.environ.get("SUB_TUNNEL_URL", "https://interaction-sas-shadow-villas.trycloudflare.com")
+DEFAULT_TUNNEL = os.environ.get("SUB_TUNNEL_URL", "https://fri-property-when-miller.trycloudflare.com")
+# последний известный рабочий туннель (в памяти — не стирается при деплое, пока процесс жив)
+CURRENT_TUNNEL = ""
 
 def get_tunnel_url():
+    """Возвращает актуальный URL туннеля.
+    Сначала смотрит в память (CURRENT_TUNNEL), потом файл, потом резолвит через /tunnel_url.
+    """
+    global CURRENT_TUNNEL
+    # 1) память
+    if CURRENT_TUNNEL:
+        return CURRENT_TUNNEL
+    # 2) файл
     try:
         with open(TUNNEL_URL_FILE) as f:
             u = f.read().strip()
             if u:
+                CURRENT_TUNNEL = u
                 return u
     except FileNotFoundError:
         pass
+    # 3) резолвим через /tunnel_url на известном туннеле (если он ещё жив)
+    import urllib.request
+    for candidate in [DEFAULT_TUNNEL, "https://fri-property-when-miller.trycloudflare.com"]:
+        try:
+            req = urllib.request.Request(f"{candidate}/tunnel_url")
+            with urllib.request.urlopen(req, timeout=10) as r:
+                u = r.read().decode().strip()
+                if u.startswith("http"):
+                    CURRENT_TUNNEL = u
+                    return u
+        except Exception:
+            continue
     return DEFAULT_TUNNEL
 
 def load_allowed():
@@ -258,6 +281,8 @@ def set_tunnel():
     u = (request.json or {}).get("url", "").strip()
     if not u.startswith("http"):
         return jsonify({"ok": False, "error": "bad url"}), 400
+    global CURRENT_TUNNEL
+    CURRENT_TUNNEL = u
     try:
         with open(TUNNEL_URL_FILE, "w") as f:
             f.write(u)
