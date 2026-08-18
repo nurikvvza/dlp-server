@@ -90,6 +90,13 @@ def download():
     common += ["--extractor-args", "youtube:player_client=android_vr,web"]
 
     dbg = {}
+    # 0) DEBUG: какие форматы видит сервер
+    try:
+        fr = subprocess.run(common + ["-F", url], capture_output=True, text=True, timeout=120)
+        dbg["formats"] = (fr.stdout or "")[-1500:]
+    except Exception as e:
+        dbg["formats_err"] = str(e)[:200]
+
     # 1) видео — 720p HD (без 360/480)
     try:
         r = subprocess.run(common + [
