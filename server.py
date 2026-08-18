@@ -111,14 +111,12 @@ def download():
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры (ОТДЕЛЬНЫЕ аргументы — БЕЗ -f, иначе конфликт с --skip-download)
+    # 2) субтитры (ОТДЕЛЬНЫЕ аргументы — БЕЗ -f, БЕЗ кук, client android_vr качает auto-subs без impersonation)
     subs_dbg = ""
     try:
         sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
-                    "--js-runtimes", "node"]
-        if os.path.isfile(COOKIES):
-            sub_args += ["--cookies", COOKIES]
-        sub_args += ["--extractor-args", "youtube:player_client=tv,web_safari"]
+                    "--js-runtimes", "node", "--remote-components", "ejs:github"]
+        sub_args += ["--extractor-args", "youtube:player_client=android_vr"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
         rs = subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
