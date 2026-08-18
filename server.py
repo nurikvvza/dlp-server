@@ -133,14 +133,14 @@ def download():
     # web_safari,tv client отдаёт реальные 720p/1080p mp4 (android_vr давал только 360p)
     common += ["--extractor-args", "youtube:player_client=web_safari,tv"]
 
-    # 1) видео — СТРОГО 720p HD, mp4 (H.264/AAC)
+    # 1) видео — СТРОГО 720p (не выше!), mp4 с audio внутри (телефон играет)
     video_ok = False
     try:
         subprocess.run(common + [
-            "-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/"
-                  "bestvideo[height>=720]+bestaudio/"
-                  "best[height>=720][ext=mp4]/"
-                  "best[height>=720]",
+            "-f", "best[height<=720][ext=mp4]/"
+                  "best[height<=720]/"
+                  "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
+                  "bestvideo[height<=720]+bestaudio",
             "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
