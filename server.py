@@ -115,7 +115,7 @@ def download():
     subs_dbg = ""
     try:
         sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
-                    "--js-runtimes", "node", "--remote-components", "ejs:github"]
+                    "--js-runtimes", "node"]
         if os.path.isfile(COOKIES):
             sub_args += ["--cookies", COOKIES]
         sub_args += ["--extractor-args", "youtube:player_client=tv,web_safari"]
