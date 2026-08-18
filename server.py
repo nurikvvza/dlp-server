@@ -13,6 +13,18 @@ YTDLP = os.path.join(os.path.dirname(sys.executable), "yt-dlp") if os.path.isfil
 COOKIES = os.path.join(BASE, "cookies.txt")        # если есть — yt-dlp берёт куки
 TOKENS_FILE = os.path.join(BASE, "allowed_tokens.txt")
 AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "dlp_secret_2024")  # запасной мастер-токен
+TUNNEL_URL_FILE = os.path.join(BASE, "tunnel_url.txt")
+DEFAULT_TUNNEL = os.environ.get("SUB_TUNNEL_URL", "https://interaction-sas-shadow-villas.trycloudflare.com")
+
+def get_tunnel_url():
+    try:
+        with open(TUNNEL_URL_FILE) as f:
+            u = f.read().strip()
+            if u:
+                return u
+    except FileNotFoundError:
+        pass
+    return DEFAULT_TUNNEL
 
 def load_allowed():
     """читает разрешённые токены из TOKENS_FILE (token\tlabel)"""
@@ -151,7 +163,7 @@ def download():
         else:
             # fallback: локальная машина через cloudflared туннель
             import urllib.request
-            tunnel = os.environ.get("SUB_TUNNEL_URL", "https://interaction-sas-shadow-villas.trycloudflare.com")
+            tunnel = get_tunnel_url()
             try:
                 req = urllib.request.Request(f"{tunnel}/subtitle?vid={vid}")
                 with urllib.request.urlopen(req, timeout=60) as r:
@@ -187,6 +199,21 @@ def clean():
             try: os.remove(os.path.join(FILES, fn))
             except: pass
         return jsonify({"ok": True, "cleaned": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/set_tunnel", methods=["POST"])
+def set_tunnel():
+    tkn = request.headers.get("X-Auth-Token", "")
+    if not token_ok(tkn):
+        return jsonify({"ok": False, "error": "Token invalid"}), 403
+    u = (request.json or {}).get("url", "").strip()
+    if not u.startswith("http"):
+        return jsonify({"ok": False, "error": "bad url"}), 400
+    try:
+        with open(TUNNEL_URL_FILE, "w") as f:
+            f.write(u)
+        return jsonify({"ok": True, "url": u})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
