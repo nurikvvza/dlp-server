@@ -1,5 +1,6 @@
 import os, re, uuid, subprocess, json, time, sys
 from flask import Flask, request, send_from_directory, send_file, jsonify
+from youtube_transcript_api import YouTubeTranscriptApi
 
 app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +34,33 @@ def token_ok(tkn):
     if tkn == AUTH_TOKEN:
         return True
     return tkn in load_allowed()
+
+def write_srt(vid, out_path):
+    """Скачивает RU субтитры через youtube-transcript-api и пишет .srt.
+    Возвращает True, если файл создан."""
+    try:
+        api = YouTubeTranscriptApi()
+        try:
+            tr = api.fetch(vid, languages=["ru"])
+        except Exception:
+            tr = api.fetch(vid, languages=["ru", "ru-orig"])
+        segs = list(tr) if not isinstance(tr, list) else tr
+        if not segs:
+            return False
+        def fmt(sec):
+            h = int(sec // 3600); m = int((sec % 3600) // 60); s = int(sec % 60)
+            ms = int((sec - int(sec)) * 1000)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+        with open(out_path, "w", encoding="utf-8") as f:
+            for i, s in enumerate(segs, 1):
+                start = s.start if hasattr(s, "start") else s["start"]
+                dur = s.duration if hasattr(s, "duration") else s["duration"]
+                text = s.text if hasattr(s, "text") else s["text"]
+                f.write(f"{i}\n{fmt(start)} --> {fmt(start + dur)}\n{text}\n\n")
+        return True
+    except Exception as e:
+        app.logger.warning("transcript failed: %s", str(e)[:200])
+        return False
 
 UA = "Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
@@ -111,19 +139,14 @@ def download():
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры (ОТДЕЛЬНЫЕ аргументы — БЕЗ -f, БЕЗ кук, client android_vr качает auto-subs без impersonation)
+    # 2) субтитры (через youtube-transcript-api — не требует impersonation/PO-token)
     subs_dbg = ""
     try:
-        sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
-                    "--js-runtimes", "node"]
-        if os.path.isfile(COOKIES):
-            sub_args += ["--cookies", COOKIES]
-        sub_args += ["--extractor-args", "youtube:player_client=web"]
-        sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
-                     "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
-        rs = subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
-                       env={**os.environ, "YTDLP_JS_RUNTIMES": "node"})
-        subs_dbg = (rs.stderr or "")[-600:]
+        srt_path = os.path.join(FILES, f"{vid}.srt")
+        if write_srt(vid, srt_path):
+            subs_dbg = "ok"
+        else:
+            subs_dbg = "no_subs"
     except Exception as e:
         subs_dbg = "EXC: " + str(e)[:200]
 
