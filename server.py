@@ -141,7 +141,7 @@ def download():
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры (через youtube-transcript-api — не требует impersonation/PO-token)
+    # 2) субтитры (через youtube-transcript-api — не требует yt-dlp/impersonation)
     subs_dbg = ""
     try:
         srt_path = os.path.join(FILES, f"{vid}.srt")
