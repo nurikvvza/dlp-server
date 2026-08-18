@@ -112,6 +112,7 @@ def download():
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
     # 2) субтитры (ОТДЕЛЬНЫЕ аргументы — БЕЗ -f, иначе конфликт с --skip-download)
+    subs_dbg = ""
     try:
         sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
                     "--js-runtimes", "node", "--remote-components", "ejs:github"]
@@ -120,10 +121,11 @@ def download():
         sub_args += ["--extractor-args", "youtube:player_client=tv"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
-        subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
+        rs = subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
                        env={**os.environ, "YTDLP_JS_RUNTIMES": "node"})
+        subs_dbg = (rs.stderr or "")[-600:]
     except Exception as e:
-        app.logger.warning("subs failed: %s", str(e)[:200])
+        subs_dbg = "EXC: " + str(e)[:200]
 
     out = []
     for fn in os.listdir(FILES):
@@ -133,7 +135,7 @@ def download():
 
     if not out:
         return jsonify({"ok": False, "error": "Файлы не создались"}), 500
-    return jsonify({"ok": True, "files": out, "title": vid})
+    return jsonify({"ok": True, "files": out, "title": vid, "subs_dbg": subs_dbg})
 
 @app.route("/api/clean", methods=["POST"])
 def clean():
