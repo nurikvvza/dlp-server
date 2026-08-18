@@ -87,11 +87,12 @@ def download():
               "--js-runtimes", "node", "--remote-components", "ejs:github"]
     if os.path.isfile(COOKIES):
         common += ["--cookies", COOKIES]
-    common += ["--extractor-args", "youtube:player_client=web_safari,tv"]
+    common += ["--extractor-args", "youtube:player_client=android_vr,web"]
 
-    # 1) видео — СТРОГО 720p HD (без 360/480), mp4+H.264/AAC
+    dbg = {}
+    # 1) видео — 720p HD (без 360/480)
     try:
-        subprocess.run(common + [
+        r = subprocess.run(common + [
             "-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/"
                   "bestvideo[height>=720]+bestaudio/"
                   "best[height>=720][ext=mp4]/"
@@ -100,6 +101,7 @@ def download():
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
         ], check=True, capture_output=True, text=True, timeout=600)
+        dbg["video_stderr"] = (r.stderr or "")[-800:]
     except subprocess.CalledProcessError as e:
         err = (e.stderr or "")[:400]
         msg = "Ошибка скачивания видео"
@@ -115,12 +117,13 @@ def download():
                     "--js-runtimes", "node", "--remote-components", "ejs:github"]
         if os.path.isfile(COOKIES):
             sub_args += ["--cookies", COOKIES]
-        sub_args += ["--extractor-args", "youtube:player_client=web_safari,tv"]
+        sub_args += ["--extractor-args", "youtube:player_client=android_vr,web"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
-        subprocess.run(sub_args, check=True, capture_output=True, text=True, timeout=120)
+        rs = subprocess.run(sub_args, capture_output=True, text=True, timeout=120)
+        dbg["subs_stderr"] = (rs.stderr or "")[-800:]
     except Exception as e:
-        app.logger.warning("subs failed: %s", str(e)[:200])
+        dbg["subs_error"] = str(e)[:200]
 
     out = []
     for fn in os.listdir(FILES):
@@ -129,8 +132,8 @@ def download():
                         "type": "video" if fn.endswith(".mp4") else "subtitle"})
 
     if not out:
-        return jsonify({"ok": False, "error": "Файлы не создались"}), 500
-    return jsonify({"ok": True, "files": out, "title": vid})
+        return jsonify({"ok": False, "error": "Файлы не создались", "debug": dbg}), 500
+    return jsonify({"ok": True, "files": out, "title": vid, "debug": dbg})
 
 @app.route("/api/formats", methods=["POST"])
 def formats():
