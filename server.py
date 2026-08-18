@@ -134,6 +134,7 @@ def download():
     common += ["--extractor-args", "youtube:player_client=web_safari,tv"]
 
     # 1) видео — СТРОГО 720p HD, mp4 (H.264/AAC)
+    video_ok = False
     try:
         subprocess.run(common + [
             "-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/"
@@ -145,12 +146,29 @@ def download():
             "-o", out_tmpl, url
         ], check=True, capture_output=True, text=True, timeout=600,
            env={**os.environ, "YTDLP_JS_RUNTIMES": "node"})
+        video_ok = True
     except subprocess.CalledProcessError as e:
         err = (e.stderr or "")[:400]
         msg = "Ошибка скачивания видео"
-        if "bot" in err or "Sign in" in err or "challenge" in err:
-            msg = "YouTube требует куки (cookies.txt). Без них видео заблокировано антиботом."
-        return jsonify({"ok": False, "error": msg, "detail": err}), 500
+        blocked = ("bot" in err or "Sign in" in err or "challenge" in err or "confirm" in err.lower())
+        if blocked:
+            # fallback: локальная машина через cloudflared туннель (чистый IP)
+            import urllib.request
+            tunnel = get_tunnel_url()
+            try:
+                req = urllib.request.Request(f"{tunnel}/video?vid={vid}")
+                with urllib.request.urlopen(req, timeout=600) as resp:
+                    data = resp.read()
+                if not data.startswith(b"err:"):
+                    vpath = os.path.join(FILES, f"{vid}.mp4")
+                    with open(vpath, "wb") as f:
+                        f.write(data)
+                    video_ok = True
+                    msg = ""
+            except Exception as ve:
+                msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:120]}"
+        if not video_ok:
+            return jsonify({"ok": False, "error": msg, "detail": err}), 500
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
