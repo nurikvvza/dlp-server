@@ -290,5 +290,20 @@ def set_tunnel():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+
+@app.route('/api/debug_tunnel', methods=['POST'])
+def debug_tunnel():
+    import urllib.request
+    tkn=request.headers.get('X-Auth-Token','')
+    if not token_ok(tkn): return jsonify({'ok':False}),403
+    tunnel=get_tunnel_url()
+    try:
+        req=urllib.request.Request(f'{tunnel}/video?vid=wTw9y2tj8JU')
+        with urllib.request.urlopen(req,timeout=60) as r:
+            data=r.read()
+        return jsonify({'ok':True,'tunnel':tunnel,'bytes':len(data),'starts_err':data.startswith(b'err:')})
+    except Exception as e:
+        return jsonify({'ok':False,'tunnel':tunnel,'error':str(e)[:300]})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
