@@ -168,19 +168,31 @@ def download():
         if blocked:
             # fallback: локальная машина через cloudflared туннель (чистый IP)
             import urllib.request
+            import time as _time
             tunnel = get_tunnel_url()
-            try:
-                req = urllib.request.Request(f"{tunnel}/video?vid={vid}")
-                with urllib.request.urlopen(req, timeout=600) as resp:
-                    data = resp.read()
-                if not data.startswith(b"err:"):
-                    vpath = os.path.join(FILES, f"{vid}.mp4")
-                    with open(vpath, "wb") as f:
-                        f.write(data)
-                    video_ok = True
-                    msg = ""
-            except Exception as ve:
-                msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:120]}"
+            fallback_ok = False
+            for attempt in range(3):
+                try:
+                    req = urllib.request.Request(f"{tunnel}/video?vid={vid}")
+                    with urllib.request.urlopen(req, timeout=600) as resp:
+                        data = resp.read()
+                    if not data.startswith(b"err:"):
+                        vpath = os.path.join(FILES, f"{vid}.mp4")
+                        with open(vpath, "wb") as f:
+                            f.write(data)
+                        video_ok = True
+                        msg = ""
+                        fallback_ok = True
+                        break
+                    else:
+                        msg = "Локальный fallback: " + data.decode()[:120]
+                except Exception as ve:
+                    # туннель мог сменить URL — ждём, пока cron/set_tunnel обновит, и ретраим
+                    msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:100]}"
+                    _time.sleep(15)
+                    tunnel = get_tunnel_url()
+            if not fallback_ok:
+                msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:120]}" if 've' in dir() else msg
         if not video_ok:
             return jsonify({"ok": False, "error": msg, "detail": err}), 500
     except subprocess.CalledProcessError as e:
