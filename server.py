@@ -200,7 +200,8 @@ def download():
             import time as _time
             tunnel = get_tunnel_url()
             fallback_ok = False
-            for attempt in range(3):
+            last_err = ""
+            for attempt in range(4):
                 try:
                     req = urllib.request.Request(f"{tunnel}/video?vid={vid}")
                     with urllib.request.urlopen(req, timeout=600) as resp:
@@ -214,14 +215,15 @@ def download():
                         fallback_ok = True
                         break
                     else:
-                        msg = "Локальный fallback: " + data.decode()[:120]
+                        last_err = "tunnel_err:" + data.decode()[:150]
+                        # локальный сервис вернул ошибку скачивания — ретраим
                 except Exception as ve:
-                    # туннель мог сменить URL — ждём, пока cron/set_tunnel обновит, и ретраим
-                    msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:100]}"
-                    _time.sleep(15)
-                    tunnel = get_tunnel_url()
+                    last_err = f"tunnel_fail:{str(ve)[:150]}"
+                # ждём и пробуем заново (туннель мог сменить URL или локально yt-dlp временно упал)
+                _time.sleep(10)
+                tunnel = get_tunnel_url()
             if not fallback_ok:
-                msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {str(ve)[:120]}" if 've' in dir() else msg
+                msg = f"YouTube блокирует скачивание (антибот). Локальный fallback не сработал: {last_err[:160]}"
         if not video_ok:
             return jsonify({"ok": False, "error": msg, "detail": err}), 500
     except subprocess.CalledProcessError as e:
