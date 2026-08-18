@@ -87,14 +87,15 @@ def download():
               "--js-runtimes", "node", "--remote-components", "ejs:github"]
     if os.path.isfile(COOKIES):
         common += ["--cookies", COOKIES]
-    common += ["--extractor-args", "youtube:player_client=android_vr,web"]
+    common += ["--extractor-args", "youtube:player_client=web_safari,tv"]
 
     # 1) видео — СТРОГО 720p HD (без 360/480), mp4+H.264/AAC
     try:
         subprocess.run(common + [
-            "-f", "bestvideo[height=720][ext=mp4]+bestaudio[ext=m4a]/"
-                  "bestvideo[height=720]+bestaudio/"
-                  "best[height=720][ext=mp4]",
+            "-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/"
+                  "bestvideo[height>=720]+bestaudio/"
+                  "best[height>=720][ext=mp4]/"
+                  "best[height>=720]",
             "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
@@ -114,7 +115,7 @@ def download():
                     "--js-runtimes", "node", "--remote-components", "ejs:github"]
         if os.path.isfile(COOKIES):
             sub_args += ["--cookies", COOKIES]
-        sub_args += ["--extractor-args", "youtube:player_client=android_vr,web"]
+        sub_args += ["--extractor-args", "youtube:player_client=web_safari,tv"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
         subprocess.run(sub_args, check=True, capture_output=True, text=True, timeout=120)
@@ -130,6 +131,26 @@ def download():
     if not out:
         return jsonify({"ok": False, "error": "Файлы не создались"}), 500
     return jsonify({"ok": True, "files": out, "title": vid})
+
+@app.route("/api/formats", methods=["POST"])
+def formats():
+    """debug: какие форматы реально видны серверу (height/ext/vcodec)"""
+    tkn = request.headers.get("X-Auth-Token", "")
+    if not token_ok(tkn):
+        return jsonify({"ok": False, "error": "Token invalid"}), 403
+    data = request.get_json(force=True, silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"ok": False, "error": "нужна url"}), 400
+    try:
+        out = subprocess.run([YTDLP, "--no-playlist", "--user-agent", UA,
+                              "--js-runtimes", "node", "--remote-components", "ejs:github",
+                              "--cookies", COOKIES if os.path.isfile(COOKIES) else "",
+                              "--extractor-args", "youtube:player_client=web_safari,tv",
+                              "-F", url], capture_output=True, text=True, timeout=120)
+        return jsonify({"ok": True, "stdout": out.stdout[-3000:], "stderr": out.stderr[-1500:]})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]})
 
 @app.route("/api/clean", methods=["POST"])
 def clean():
