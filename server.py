@@ -37,16 +37,19 @@ def token_ok(tkn):
 
 def write_srt(vid, out_path):
     """Скачивает RU субтитры через youtube-transcript-api и пишет .srt.
-    Возвращает True, если файл создан."""
+    Возвращает (True, '') при успехе или (False, 'причина')."""
     try:
         api = YouTubeTranscriptApi()
         try:
             tr = api.fetch(vid, languages=["ru"])
-        except Exception:
-            tr = api.fetch(vid, languages=["ru", "ru-orig"])
+        except Exception as e1:
+            try:
+                tr = api.fetch(vid, languages=["ru", "ru-orig"])
+            except Exception as e2:
+                return False, f"ru_fail:{str(e1)[:80]} | ru-orig_fail:{str(e2)[:80]}"
         segs = list(tr) if not isinstance(tr, list) else tr
         if not segs:
-            return False
+            return False, "empty_segments"
         def fmt(sec):
             h = int(sec // 3600); m = int((sec % 3600) // 60); s = int(sec % 60)
             ms = int((sec - int(sec)) * 1000)
@@ -57,10 +60,9 @@ def write_srt(vid, out_path):
                 dur = s.duration if hasattr(s, "duration") else s["duration"]
                 text = s.text if hasattr(s, "text") else s["text"]
                 f.write(f"{i}\n{fmt(start)} --> {fmt(start + dur)}\n{text}\n\n")
-        return True
+        return True, ""
     except Exception as e:
-        app.logger.warning("transcript failed: %s", str(e)[:200])
-        return False
+        return False, f"EXC:{str(e)[:150]}"
 
 UA = "Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
@@ -143,10 +145,8 @@ def download():
     subs_dbg = ""
     try:
         srt_path = os.path.join(FILES, f"{vid}.srt")
-        if write_srt(vid, srt_path):
-            subs_dbg = "ok"
-        else:
-            subs_dbg = "no_subs"
+        ok, reason = write_srt(vid, srt_path)
+        subs_dbg = "ok" if ok else f"no_subs:{reason}"
     except Exception as e:
         subs_dbg = "EXC: " + str(e)[:200]
 
