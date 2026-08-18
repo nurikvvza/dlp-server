@@ -140,7 +140,7 @@ def download():
                   "best[height<=720]/"
                   "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
                   "bestvideo[height<=720]+bestaudio",
-            "--format-sort", "res:720,codec:avc,vcodec:avc1,tbr<2500",
+            "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
         ], check=True, capture_output=True, text=True, timeout=600,
