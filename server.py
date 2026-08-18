@@ -89,30 +89,37 @@ def download():
         common += ["--cookies", COOKIES]
     common += ["--extractor-args", "youtube:player_client=android_vr,web"]
 
-    # 1) видео — высокое качество (минимум 720p, до 1080p)
+    # 1) видео — СТРОГО 720p HD (без 360/480), mp4+H.264/AAC
     try:
         subprocess.run(common + [
-            "-f", "bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height>=720]+bestaudio/best[height>=720]/best",
+            "-f", "bestvideo[height=720][ext=mp4]+bestaudio[ext=m4a]/"
+                  "bestvideo[height=720]+bestaudio/"
+                  "best[height=720][ext=mp4]",
+            "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
         ], check=True, capture_output=True, text=True, timeout=600)
     except subprocess.CalledProcessError as e:
         err = (e.stderr or "")[:400]
         msg = "Ошибка скачивания видео"
-        if "bot" in err or "Sign in" in err:
+        if "bot" in err or "Sign in" in err or "challenge" in err:
             msg = "YouTube требует куки (cookies.txt). Без них видео заблокировано антиботом."
         return jsonify({"ok": False, "error": msg, "detail": err}), 500
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры
+    # 2) субтитры (ОТДЕЛЬНЫЕ аргументы — без -f, иначе конфликт с --skip-download)
     try:
-        subprocess.run(common + [
-            "--skip-download", "--write-subs", "--write-auto-subs",
-            "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url
-        ], check=True, capture_output=True, text=True, timeout=120)
-    except Exception:
-        pass
+        sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
+                    "--js-runtimes", "node", "--remote-components", "ejs:github"]
+        if os.path.isfile(COOKIES):
+            sub_args += ["--cookies", COOKIES]
+        sub_args += ["--extractor-args", "youtube:player_client=android_vr,web"]
+        sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
+                     "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
+        subprocess.run(sub_args, check=True, capture_output=True, text=True, timeout=120)
+    except Exception as e:
+        app.logger.warning("subs failed: %s", str(e)[:200])
 
     out = []
     for fn in os.listdir(FILES):
