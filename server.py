@@ -105,7 +105,21 @@ def files(name):
 @app.route("/api/download", methods=["POST"])
 def download():
     data = request.get_json(force=True, silent=True) or {}
-    url = (data.get("url") or "").strip()
+    raw = (data.get("url") or "").strip()
+    # нормализуем ссылку: вытаскиваем чистый video ID, отсекаем мусорные параметры (?is= и т.п.)
+    import re as _re
+    vid = None
+    m = _re.search(r"(?:shorts/|watch\?v=|youtu\.be/|embed/)([\w-]{11})", raw)
+    if m:
+        vid = m.group(1)
+    if not vid:
+        m2 = _re.search(r"[\?&]v=([\w-]{11})", raw)
+        if m2:
+            vid = m2.group(1)
+    if vid:
+        url = f"https://www.youtube.com/watch?v={vid}"
+    else:
+        url = raw
     u = url.lower()
     # разрешаем любые YouTube-ссылки: watch, shorts, youtu.be, live, nocookie и т.д.
     is_yt = ("youtube.com" in u or "youtu.be" in u or "youtube-nocookie.com" in u
