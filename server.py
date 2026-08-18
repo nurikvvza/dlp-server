@@ -20,13 +20,31 @@ CURRENT_TUNNEL = ""
 
 def get_tunnel_url():
     """Возвращает актуальный URL туннеля.
-    Сначала смотрит в память (CURRENT_TUNNEL), потом файл, потом резолвит через /tunnel_url.
+    Всегда пытается резолвить свежий URL через /tunnel_url (туннель меняет URL при рестарте).
     """
     global CURRENT_TUNNEL
-    # 1) память
+    import urllib.request
+    # 1) пробуем резолвить через известные туннели (актуальный может смениться)
+    candidates = []
     if CURRENT_TUNNEL:
-        return CURRENT_TUNNEL
-    # 2) файл
+        candidates.append(CURRENT_TUNNEL)
+    candidates += [DEFAULT_TUNNEL, "https://fri-property-when-miller.trycloudflare.com"]
+    # убираем дубли, сохраняем порядок
+    seen = set(); uniq = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c); uniq.append(c)
+    for candidate in uniq:
+        try:
+            req = urllib.request.Request(f"{candidate}/tunnel_url")
+            with urllib.request.urlopen(req, timeout=8) as r:
+                u = r.read().decode().strip()
+                if u.startswith("http"):
+                    CURRENT_TUNNEL = u
+                    return u
+        except Exception:
+            continue
+    # 2) файл (на случай если резолвинг недоступен)
     try:
         with open(TUNNEL_URL_FILE) as f:
             u = f.read().strip()
@@ -35,19 +53,7 @@ def get_tunnel_url():
                 return u
     except FileNotFoundError:
         pass
-    # 3) резолвим через /tunnel_url на известном туннеле (если он ещё жив)
-    import urllib.request
-    for candidate in [DEFAULT_TUNNEL, "https://fri-property-when-miller.trycloudflare.com"]:
-        try:
-            req = urllib.request.Request(f"{candidate}/tunnel_url")
-            with urllib.request.urlopen(req, timeout=10) as r:
-                u = r.read().decode().strip()
-                if u.startswith("http"):
-                    CURRENT_TUNNEL = u
-                    return u
-        except Exception:
-            continue
-    return DEFAULT_TUNNEL
+    return CURRENT_TUNNEL or DEFAULT_TUNNEL
 
 def load_allowed():
     """читает разрешённые токены из TOKENS_FILE (token\tlabel)"""
