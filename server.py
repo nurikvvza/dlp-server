@@ -106,7 +106,6 @@ def files(name):
 def download():
     data = request.get_json(force=True, silent=True) or {}
     url = (data.get("url") or "").strip()
-    want_subs = bool(data.get("subs", False))
     u = url.lower()
     # разрешаем любые YouTube-ссылки: watch, shorts, youtu.be, live, nocookie и т.д.
     is_yt = ("youtube.com" in u or "youtu.be" in u or "youtube-nocookie.com" in u
@@ -141,7 +140,7 @@ def download():
                   "best[height<=720]/"
                   "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
                   "bestvideo[height<=720]+bestaudio",
-            "--format-sort", "res:720,codec:avc,vcodec:avc1",
+            "--format-sort", "res:720,codec:avc,vcodec:avc1,tbr<2500",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
         ], check=True, capture_output=True, text=True, timeout=600,
@@ -172,34 +171,31 @@ def download():
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры: только если запрошено чипом «Субтитры RU»
+    # 2) субтитры: ВСЕГДА пытаемся (чип в APK убран, кнопка показывается всегда)
     subs_dbg = ""
     srt_path = os.path.join(FILES, f"{vid}.srt")
-    if want_subs:
-        try:
-            ok, reason = write_srt(vid, srt_path)
-            if ok:
-                subs_dbg = "local_ok"
-            else:
-                # fallback: локальная машина через cloudflared туннель
-                import urllib.request
-                tunnel = get_tunnel_url()
-                try:
-                    req = urllib.request.Request(f"{tunnel}/subtitle?vid={vid}")
-                    with urllib.request.urlopen(req, timeout=60) as r:
-                        data = r.read()
-                    if data.startswith(b"err:"):
-                        subs_dbg = "tunnel_err:" + data.decode()[:120]
-                    else:
-                        with open(srt_path, "wb") as f:
-                            f.write(data)
-                        subs_dbg = "tunnel_ok"
-                except Exception as te:
-                    subs_dbg = f"no_subs:{reason} | tunnel_fail:{str(te)[:100]}"
-        except Exception as e:
-            subs_dbg = "EXC: " + str(e)[:200]
-    else:
-        subs_dbg = "skipped"
+    try:
+        ok, reason = write_srt(vid, srt_path)
+        if ok:
+            subs_dbg = "local_ok"
+        else:
+            # fallback: локальная машина через cloudflared туннель
+            import urllib.request
+            tunnel = get_tunnel_url()
+            try:
+                req = urllib.request.Request(f"{tunnel}/subtitle?vid={vid}")
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    data = r.read()
+                if data.startswith(b"err:"):
+                    subs_dbg = "tunnel_err:" + data.decode()[:120]
+                else:
+                    with open(srt_path, "wb") as f:
+                        f.write(data)
+                    subs_dbg = "tunnel_ok"
+            except Exception as te:
+                subs_dbg = f"no_subs:{reason} | tunnel_fail:{str(te)[:100]}"
+    except Exception as e:
+        subs_dbg = "EXC: " + str(e)[:200]
 
     out = []
     for fn in os.listdir(FILES):
