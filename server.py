@@ -141,12 +141,29 @@ def download():
     except Exception as e:
         return jsonify({"ok": False, "error": "Серверная ошибка: " + str(e)[:300]}), 500
 
-    # 2) субтитры (через youtube-transcript-api — не требует yt-dlp/impersonation)
+    # 2) субтитры: пробуем локально, потом через туннель к локальной машине (где API работает)
     subs_dbg = ""
+    srt_path = os.path.join(FILES, f"{vid}.srt")
     try:
-        srt_path = os.path.join(FILES, f"{vid}.srt")
         ok, reason = write_srt(vid, srt_path)
-        subs_dbg = "ok" if ok else f"no_subs:{reason}"
+        if ok:
+            subs_dbg = "local_ok"
+        else:
+            # fallback: локальная машина через cloudflared туннель
+            import urllib.request
+            tunnel = os.environ.get("SUB_TUNNEL_URL", "https://interaction-sas-shadow-villas.trycloudflare.com")
+            try:
+                req = urllib.request.Request(f"{tunnel}/subtitle?vid={vid}")
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    data = r.read()
+                if data.startswith(b"err:"):
+                    subs_dbg = "tunnel_err:" + data.decode()[:120]
+                else:
+                    with open(srt_path, "wb") as f:
+                        f.write(data)
+                    subs_dbg = "tunnel_ok"
+            except Exception as te:
+                subs_dbg = f"no_subs:{reason} | tunnel_fail:{str(te)[:100]}"
     except Exception as e:
         subs_dbg = "EXC: " + str(e)[:200]
 
