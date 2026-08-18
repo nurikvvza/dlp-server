@@ -115,8 +115,10 @@ def download():
     subs_dbg = ""
     try:
         sub_args = [YTDLP, "--no-playlist", "--user-agent", UA,
-                    "--js-runtimes", "node"]
-        sub_args += ["--extractor-args", "youtube:player_client=tv"]
+                    "--js-runtimes", "node", "--remote-components", "ejs:github"]
+        if os.path.isfile(COOKIES):
+            sub_args += ["--cookies", COOKIES]
+        sub_args += ["--extractor-args", "youtube:player_client=web_safari,web"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
         rs = subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
