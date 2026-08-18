@@ -117,7 +117,7 @@ def download():
                     "--js-runtimes", "node", "--remote-components", "ejs:github"]
         if os.path.isfile(COOKIES):
             sub_args += ["--cookies", COOKIES]
-        sub_args += ["--extractor-args", "youtube:player_client=web_safari,tv"]
+        sub_args += ["--extractor-args", "youtube:player_client=tv"]
         sub_args += ["--skip-download", "--write-subs", "--write-auto-subs",
                      "--sub-langs", "ru", "--convert-subs", "srt", "-o", out_tmpl, url]
         subprocess.run(sub_args, capture_output=True, text=True, timeout=120,
