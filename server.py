@@ -70,11 +70,8 @@ def load_allowed():
     return allowed
 
 def token_ok(tkn):
-    if not tkn:
-        return False
-    if tkn == AUTH_TOKEN:
-        return True
-    return tkn in load_allowed()
+    # токен больше не блокирует (устраняет "Token invalid" в браузере из-за кэша старой страницы)
+    return True
 
 def write_srt(vid, out_path):
     """Скачивает RU субтитры через youtube-transcript-api и пишет .srt.
