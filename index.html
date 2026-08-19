@@ -223,17 +223,8 @@ goBtn.addEventListener('click',async()=>{
   }
 });
 
-// === скачивание: в APK (WebView) — навигация (DownloadManager),
-//     в браузере — fetch+Blob (чтобы .srt скачивался, а не открывался) ===
-function isApp() {
-  return !!(window.Android || /; wv\)/.test(navigator.userAgent) || /WebView/.test(navigator.userAgent));
-}
+// === скачивание: fetch+Blob для всех, fallback на location.href для APK ===
 async function downloadUrl(url, name) {
-  if (isApp()) {
-    window.location.href = url; // Android скачает нативно
-    return;
-  }
-  // браузер: fetch+Blob
   try {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -246,16 +237,19 @@ async function downloadUrl(url, name) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (e) {
-    alert('Не удалось скачать: ' + e.message);
+    // fallback: прямая навигация (Android WebView скачает нативно)
+    window.location.href = url;
   }
 }
 dlVideo.addEventListener('click', (e) => {
   e.preventDefault();
-  if (dlVideo.dataset.url) downloadUrl(dlVideo.dataset.url, dlVideo.dataset.name);
+  if (!dlVideo.dataset.url) { alert('Сначала скачай видео'); return; }
+  downloadUrl(dlVideo.dataset.url, dlVideo.dataset.name);
 });
 dlSub.addEventListener('click', (e) => {
   e.preventDefault();
-  if (dlSub.dataset.url) downloadUrl(dlSub.dataset.url, dlSub.dataset.name);
+  if (!dlSub.dataset.url) { alert('Сначала скачай видео (субтитры появятся вместе с ним)'); return; }
+  downloadUrl(dlSub.dataset.url, dlSub.dataset.name);
 });
 
 // === Очистка метаданных (прокси через туннель → watermarks-remover :8765) ===
