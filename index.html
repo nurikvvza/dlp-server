@@ -64,7 +64,6 @@ body{
   animation:pulse 1.8s ease-in-out infinite;
 }
 .dl-btn.sub{background:linear-gradient(135deg,#ff5a3c,#ff1a1a)}
-.dl-btn.clean{background:linear-gradient(135deg,#2bd4a8,#1a9e7a);margin-top:8px;display:flex !important}
 .dl-btn.show{display:flex !important}
 .dl-btn:active{transform:scale(.97)}
 @keyframes pulse{
@@ -134,13 +133,10 @@ body{
     </div>
     <div class="bar"><i id="r-bar"></i></div>
     <div class="done-title" id="r-done">✅ Готово — нажми, чтобы скачать</div>
-    <input type="file" id="clean-file" accept="*/*" style="display:none">
   </div>
 
   <a class="dl-btn" id="dl-video">⬇ СКАЧАТЬ ВИДЕО (HD)</a>
   <a class="dl-btn sub" id="dl-sub">⬇ СКАЧАТЬ СУБТИТРЫ RU</a>
-  <button class="dl-btn clean" id="clean-btn">🧹 ОЧИСТИТЬ МЕТАДАННЫЕ</button>
-
   <div class="foot">Сделано ❤ Разработчик <a id="tgLink" href="intent://resolve?domain=nurikvvza#Intent;scheme=tg;package=org.telegram.messenger;end">https://t.me/nurikvvza</a></div>
 </div>
 
@@ -251,48 +247,6 @@ document.addEventListener('click', (e) => {
   const name = t.dataset.name;
   if (!url) { alert('Сначала скачай видео — кнопки появятся после загрузки'); return; }
   downloadUrl(url, name);
-});
-
-// === Очистка метаданных (прокси через туннель → watermarks-remover :8765) ===
-const WM_URL = BASE_URL; // same-origin с туннелем (сервер проксирует /clean)
-const cleanBtn = document.getElementById('clean-btn');
-const cleanFile = document.getElementById('clean-file');
-cleanBtn.addEventListener('click', () => cleanFile.click());
-cleanFile.addEventListener('change', async () => {
-  const file = cleanFile.files[0];
-  if (!file) return;
-  cleanBtn.disabled = true;
-  const old = cleanBtn.textContent;
-  cleanBtn.textContent = '🧹 Очищаем…';
-  try {
-    const buf = await file.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-    const resp = await fetch(WM_URL + '/clean', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: b64, name: file.name })
-    });
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.error || 'clean failed');
-    const bin = atob(data.cleaned);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' });
-    const a = document.createElement('a');
-    const cleanName = file.name.replace(/(\.[^.]+)$/, '.clean$1');
-    a.href = URL.createObjectURL(blob);
-    a.download = cleanName;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    cleanBtn.textContent = '✅ Готово — скачано';
-    setTimeout(() => { cleanBtn.textContent = old; }, 3000);
-  } catch (e) {
-    cleanBtn.textContent = '❌ ' + (e.message || 'ошибка');
-    setTimeout(() => { cleanBtn.textContent = old; }, 4000);
-  } finally {
-    cleanBtn.disabled = false;
-    cleanFile.value = '';
-}
 });
 </script>
 </body>
