@@ -236,8 +236,14 @@ async function downloadUrl(url, name) {
     window.Android.download(url);
     return;
   }
-  // браузер: навигация — сервер отдаёт Content-Disposition: attachment, браузер скачивает
-  window.location.href = url;
+  // браузер: принудительное скачивание через <a download> (работает для видео и субтитров)
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name || 'download';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 document.addEventListener('click', (e) => {
   const t = e.target.closest('#dl-video, #dl-sub');
