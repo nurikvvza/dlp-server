@@ -133,11 +133,11 @@ body{
     </div>
     <div class="bar"><i id="r-bar"></i></div>
     <div class="done-title" id="r-done">✅ Готово — нажми, чтобы скачать</div>
-    <a class="dl-btn" id="dl-video" download>⬇ СКАЧАТЬ ВИДЕО (HD)</a>
-    <a class="dl-btn sub" id="dl-sub" download>⬇ СКАЧАТЬ СУБТИТРЫ RU</a>
     <input type="file" id="clean-file" accept="*/*" style="display:none">
   </div>
 
+  <a class="dl-btn" id="dl-video">⬇ СКАЧАТЬ ВИДЕО (HD)</a>
+  <a class="dl-btn sub" id="dl-sub">⬇ СКАЧАТЬ СУБТИТРЫ RU</a>
   <button class="dl-btn clean" id="clean-btn">🧹 ОЧИСТИТЬ МЕТАДАННЫЕ</button>
 
   <div class="foot">Сделано ❤ Разработчик <a id="tgLink" href="intent://resolve?domain=nurikvvza#Intent;scheme=tg;package=org.telegram.messenger;end">https://t.me/nurikvvza</a></div>
@@ -208,8 +208,8 @@ goBtn.addEventListener('click',async()=>{
       if(f.type==='video') v=f;
       else if(f.type==='subtitle') s=f;
     });
-    if(v){ dlVideo.href=BASE_URL+v.url+'?t='+encodeURIComponent(TOK); dlVideo.setAttribute('download',v.name); dlVideo.classList.add('show'); dlVideo.style.display='flex'; }
-    if(s){ dlSub.href=BASE_URL+s.url+'?t='+encodeURIComponent(TOK); dlSub.setAttribute('download',s.name); dlSub.classList.add('show'); dlSub.style.display='flex'; }
+    if(v){ dlVideo.dataset.url=BASE_URL+v.url; dlVideo.dataset.name=v.name; dlVideo.classList.add('show'); dlVideo.style.display='flex'; }
+    if(s){ dlSub.dataset.url=BASE_URL+s.url; dlSub.dataset.name=s.name; dlSub.classList.add('show'); dlSub.style.display='flex'; }
     if(!v && !s){ rStatus.textContent='Видео не найдено'; }
     setTimeout(()=>dlVideo.scrollIntoView({behavior:'smooth',block:'center'}),300);
   }catch(e){
@@ -220,6 +220,21 @@ goBtn.addEventListener('click',async()=>{
   }finally{
     goBtn.disabled=false;
   }
+});
+
+// === надёжное скачивание: навигация (WebView ловит через DownloadManager) ===
+function downloadUrl(url, name) {
+  // для больших файлов (видео) fetch+Blob падает в WebView —
+  // используем прямую навигацию, Android скачает нативно
+  window.location.href = url;
+}
+dlVideo.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (dlVideo.dataset.url) downloadUrl(dlVideo.dataset.url, dlVideo.dataset.name);
+});
+dlSub.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (dlSub.dataset.url) downloadUrl(dlSub.dataset.url, dlSub.dataset.name);
 });
 
 // === Очистка метаданных (watermarks-remover :8765) ===
