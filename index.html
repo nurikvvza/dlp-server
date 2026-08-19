@@ -235,7 +235,12 @@ async function downloadUrl(url, name) {
     window.Android.download(url);
     return;
   }
-  // браузер: ТОТ ЖЕ способ, что и для субтитров (fetch+Blob) — видео и субтитры качаются одинаково
+  // браузер: видео — прямая навигация (Chrome скачивает нативно через attachment),
+  //          субтитры — fetch+Blob (работают)
+  if (url.indexOf('.mp4') !== -1) {
+    window.location.href = url;
+    return;
+  }
   try {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
