@@ -120,6 +120,17 @@ class H(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(500, ("err:" + str(e)[:300]).encode())
             return
+        # отдача готовых файлов (видео/субтитры) — GET
+        if p.path == "/files" or p.path.startswith("/files/"):
+            fn = p.path.split("/")[-1].split("?")[0]
+            fp = os.path.join(CACHE, fn)
+            if os.path.isfile(fp) and safe_vid(fn.split(".")[0]):
+                with open(fp, "rb") as f:
+                    ctype = "video/mp4" if fn.endswith(".mp4") else "application/x-subrip"
+                    self._send(200, f.read(), ctype, fn)
+            else:
+                self._send(404, b"not found")
+            return
         self._send(404, b"not found")
 
     def do_POST(self):
@@ -157,7 +168,7 @@ class H(http.server.BaseHTTPRequestHandler):
             self._send(200, json.dumps({"ok": True, "files": files}).encode(), "application/json")
             return
         if p.path == "/files" or p.path.startswith("/files/"):
-            fn = p.path.split("/")[-1]
+            fn = p.path.split("/")[-1].split("?")[0]
             fp = os.path.join(CACHE, fn)
             if os.path.isfile(fp) and safe_vid(fn.split(".")[0]):
                 with open(fp, "rb") as f:
