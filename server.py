@@ -184,7 +184,7 @@ def download():
             "--format-sort", "res:720,codec:avc,vcodec:avc1",
             "--merge-output-format", "mp4",
             "-o", out_tmpl, url
-        ], check=True, capture_output=True, text=True, timeout=600,
+        ], check=True, capture_output=True, text=True, timeout=1800,
            env={**os.environ, "YTDLP_JS_RUNTIMES": "node"})
         video_ok = True
     except subprocess.CalledProcessError as e:
