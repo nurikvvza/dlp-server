@@ -1,4 +1,4 @@
-import os, re, json, urllib.parse, http.server, socketserver, subprocess, sys, time
+import os, re, json, urllib.parse, urllib.request, http.server, socketserver, subprocess, sys, time
 
 CACHE = "/home/administrator/dlp_cache"
 os.makedirs(CACHE, exist_ok=True)
@@ -166,6 +166,27 @@ class H(http.server.BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send(200, json.dumps({"ok": True, "files": files}).encode(), "application/json")
+            return
+        if p.path == "/clean":
+            # проксируем на локальный watermarks-remover (:8765)
+            try:
+                ln = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(ln) or b"{}"
+                req = urllib.request.Request(
+                    "http://127.0.0.1:8765/clean",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    data = r.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self._send(500, json.dumps({"ok": False, "error": str(e)[:200]}).encode(), "application/json")
             return
         if p.path == "/files" or p.path.startswith("/files/"):
             fn = p.path.split("/")[-1].split("?")[0]

@@ -57,6 +57,7 @@ body{
 .dl-btn{
   display:none;align-items:center;justify-content:center;gap:10px;width:100%;
   border:none;cursor:pointer;text-decoration:none;border-radius:16px;padding:18px;
+  margin-bottom:12px;
   font-size:16px;font-weight:800;color:#fff;
   background:linear-gradient(135deg,var(--red),var(--red2));
   box-shadow:0 8px 26px #ff1a1a55, 0 0 0 1px #ff1a1a22 inset;
@@ -237,8 +238,8 @@ dlSub.addEventListener('click', (e) => {
   if (dlSub.dataset.url) downloadUrl(dlSub.dataset.url, dlSub.dataset.name);
 });
 
-// === Очистка метаданных (watermarks-remover :8765) ===
-const WM_URL = 'http://127.0.0.1:8765';
+// === Очистка метаданных (прокси через туннель → watermarks-remover :8765) ===
+const WM_URL = BASE_URL; // same-origin с туннелем (сервер проксирует /clean)
 const cleanBtn = document.getElementById('clean-btn');
 const cleanFile = document.getElementById('clean-file');
 cleanBtn.addEventListener('click', () => cleanFile.click());
