@@ -12,7 +12,7 @@ os.makedirs(FILES, exist_ok=True)
 YTDLP = os.path.join(os.path.dirname(sys.executable), "yt-dlp") if os.path.isfile(os.path.join(os.path.dirname(sys.executable), "yt-dlp")) else "yt-dlp"
 COOKIES = os.path.join(BASE, "cookies.txt")        # если есть — yt-dlp берёт куки
 TOKENS_FILE = os.path.join(BASE, "allowed_tokens.txt")
-AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "dlp_secret_2024")  # запасной мастер-токен
+AUTH_TOKEN = "dlp_secret_2024"  # мастер-токен (совпадает с TOK в index.html)
 TUNNEL_URL_FILE = os.path.join(BASE, "tunnel_url.txt")
 DEFAULT_TUNNEL = os.environ.get("SUB_TUNNEL_URL", "https://fri-property-when-miller.trycloudflare.com")
 # последний известный рабочий туннель (в памяти — не стирается при деплое, пока процесс жив)
