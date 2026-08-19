@@ -223,11 +223,31 @@ goBtn.addEventListener('click',async()=>{
   }
 });
 
-// === надёжное скачивание: навигация (WebView ловит через DownloadManager) ===
-function downloadUrl(url, name) {
-  // для больших файлов (видео) fetch+Blob падает в WebView —
-  // используем прямую навигацию, Android скачает нативно
-  window.location.href = url;
+// === скачивание: в APK (WebView) — навигация (DownloadManager),
+//     в браузере — fetch+Blob (чтобы .srt скачивался, а не открывался) ===
+function isApp() {
+  return !!(window.Android || /; wv\)/.test(navigator.userAgent) || /WebView/.test(navigator.userAgent));
+}
+async function downloadUrl(url, name) {
+  if (isApp()) {
+    window.location.href = url; // Android скачает нативно
+    return;
+  }
+  // браузер: fetch+Blob
+  try {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'download';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) {
+    alert('Не удалось скачать: ' + e.message);
+  }
 }
 dlVideo.addEventListener('click', (e) => {
   e.preventDefault();
