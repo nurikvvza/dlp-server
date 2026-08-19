@@ -236,12 +236,6 @@ async function downloadUrl(url, name) {
     window.Android.download(url);
     return;
   }
-  // браузер: видео открываем нативно (браузер сам скачивает, fetch+Blob падает на больших файлах)
-  if (url.indexOf('.mp4') !== -1) {
-    window.open(url, '_blank');
-    return;
-  }
-  // браузер: субтитры через fetch+Blob
   try {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
