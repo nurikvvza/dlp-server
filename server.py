@@ -171,8 +171,7 @@ def download():
     common = [YTDLP, "--no-playlist", "--user-agent", UA,
               "--js-runtimes", "node", "--remote-components", "ejs:github"]
     if os.path.isfile(COOKIES):
-        # куки часто протухают и ломают yt-dlp — не используем их для видео
-        pass
+        common += ["--cookies", COOKIES]
     # web_safari,tv client отдаёт реальные 720p/1080p mp4 (android_vr давал только 360p)
     common += ["--extractor-args", "youtube:player_client=web_safari,tv"]
 
