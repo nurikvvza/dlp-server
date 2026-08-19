@@ -222,8 +222,20 @@ goBtn.addEventListener('click',async()=>{
   }
 });
 
-// === скачивание через делегирование (надёжно даже если кнопка не найдена при загрузке) ===
+// === скачивание ===
+// APK (WebView): window.location.href → Android ловит через shouldOverrideUrlLoading
+//                и скачивает нативно через DownloadManager (НЕ грузит файл в память WebView = не крашит)
+// Браузер: fetch+Blob (скачивает файл)
+function isApp() {
+  try { return !!(window.Android && window.Android.isApp && window.Android.isApp()); }
+  catch(e) { return false; }
+}
 async function downloadUrl(url, name) {
+  if (isApp()) {
+    // нативное скачивание через Android (не грузит файл в память WebView = не крашит)
+    window.Android.download(url);
+    return;
+  }
   try {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -236,7 +248,7 @@ async function downloadUrl(url, name) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (e) {
-    window.location.href = url; // fallback для APK
+    alert('Не удалось скачать: ' + e.message);
   }
 }
 document.addEventListener('click', (e) => {
