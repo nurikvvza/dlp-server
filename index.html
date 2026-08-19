@@ -236,14 +236,21 @@ async function downloadUrl(url, name) {
     window.Android.download(url);
     return;
   }
-  // браузер: принудительное скачивание через <a download> (работает для видео и субтитров)
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name || 'download';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // браузер: тот же способ, что и для субтитров (fetch+Blob) — надёжно скачивает
+  try {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'download';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) {
+    alert('Не удалось скачать: ' + e.message);
+  }
 }
 document.addEventListener('click', (e) => {
   const t = e.target.closest('#dl-video, #dl-sub');
