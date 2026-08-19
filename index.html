@@ -232,11 +232,19 @@ function isApp() {
 }
 async function downloadUrl(url, name) {
   if (isApp()) {
-    // нативное скачивание через Android (не грузит файл в память WebView = не крашит)
     window.Android.download(url);
     return;
   }
-  // браузер: тот же способ, что и для субтитров (fetch+Blob) — надёжно скачивает
+  // браузер: субтитры через fetch+Blob (работает), видео через <a download> (скачивает файл, не вкладку)
+  if (url.indexOf('.mp4') !== -1) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name || 'video.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
   try {
     const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
