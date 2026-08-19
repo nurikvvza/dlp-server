@@ -126,7 +126,8 @@ def files(name):
     full = os.path.join(FILES, name)
     if not os.path.isfile(full):
         return jsonify({"ok": False, "error": "File not found"}), 404
-    return send_file(full, as_attachment=True, download_name=name)
+    mt = "application/octet-stream" if name.endswith(".mp4") else None
+    return send_file(full, as_attachment=True, download_name=name, mimetype=mt)
 
 @app.route("/api/download", methods=["POST"])
 def download():
