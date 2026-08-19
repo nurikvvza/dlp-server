@@ -63,6 +63,8 @@ body{
   animation:pulse 1.8s ease-in-out infinite;
 }
 .dl-btn.sub{background:linear-gradient(135deg,#ff5a3c,#ff1a1a)}
+.dl-btn.clean{background:linear-gradient(135deg,#2bd4a8,#1a9e7a);margin-top:8px;display:flex !important}
+.dl-btn.show{display:flex !important}
 .dl-btn:active{transform:scale(.97)}
 @keyframes pulse{
   0%,100%{box-shadow:0 8px 26px #ff1a1a55, 0 0 0 1px #ff1a1a22 inset}
@@ -117,10 +119,6 @@ body{
       <span class="ic">🔗</span>
       <input id="url" type="text" inputmode="url" placeholder="https://youtube.com/shorts/..." autocomplete="off">
     </div>
-    <div class="opts">
-      <div class="chip on" data-fmt="mp4">🎬 Видео MP4</div>
-      <div class="chip on" data-fmt="ru">📝 Субтитры RU</div>
-    </div>
     <button class="btn" id="go">⬇ Скачать бесплатно</button>
   </div>
 
@@ -137,19 +135,18 @@ body{
     <div class="done-title" id="r-done">✅ Готово — нажми, чтобы скачать</div>
     <a class="dl-btn" id="dl-video" download>⬇ СКАЧАТЬ ВИДЕО (HD)</a>
     <a class="dl-btn sub" id="dl-sub" download>⬇ СКАЧАТЬ СУБТИТРЫ RU</a>
+    <input type="file" id="clean-file" accept="*/*" style="display:none">
   </div>
+
+  <button class="dl-btn clean" id="clean-btn">🧹 ОЧИСТИТЬ МЕТАДАННЫЕ</button>
 
   <div class="foot">Сделано ❤ Разработчик <a id="tgLink" href="intent://resolve?domain=nurikvvza#Intent;scheme=tg;package=org.telegram.messenger;end">https://t.me/nurikvvza</a></div>
 </div>
 
 <script>
-// защита от старого кэша: если открыт старый мёртвый домен — уходим на актуальный
-if (location.hostname && location.hostname.includes('pages-circles-licenses-clean')) {
-  location.href = 'https://winner-fired-blvd-fee.trycloudflare.com/';
-}
 const BASE_URL = (window.location.origin && window.location.protocol.startsWith('http'))
   ? window.location.origin
-  : 'https://winner-fired-blvd-fee.trycloudflare.com';
+  : 'https://dlp-server-lddd.onrender.com';
 
 const urlInput=document.getElementById('url');
 const goBtn=document.getElementById('go');
@@ -185,18 +182,22 @@ goBtn.addEventListener('click',async()=>{
   const u=urlInput.value.trim();
   if(!u){urlInput.focus();return;}
   res.classList.add('show');
-  dlVideo.style.display='none';
-  dlSub.style.display='none';
+  dlVideo.classList.remove('show');
+  dlSub.classList.remove('show');
   rDone.style.display='none';
   rTitle.textContent=u.length>38?u.slice(0,38)+'…':u;
   rStatus.textContent='Отправляем на сервер yt-dlp…';
   rBar.style.width='15%';
   goBtn.disabled=true;
+  // таймаут запроса (сервер может думать до ~50с из-за retry)
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(), 90000);
   try{
     const resp=await fetch(BASE_URL+'/api/download',{
       method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOK},
-      body:JSON.stringify({url:u})
+      body:JSON.stringify({url:u}),cache:'no-store',signal:ctrl.signal
     });
+    clearTimeout(timer);
     const data=await resp.json();
     if(!data.ok){throw new Error(data.error||'Ошибка');}
     rStatus.textContent='Готово ✓';
@@ -207,15 +208,60 @@ goBtn.addEventListener('click',async()=>{
       if(f.type==='video') v=f;
       else if(f.type==='subtitle') s=f;
     });
-    if(v){ dlVideo.href=BASE_URL+v.url+'?t='+encodeURIComponent(TOK); dlVideo.setAttribute('download',v.name); dlVideo.style.display='flex'; }
-    if(s){ dlSub.href=BASE_URL+s.url+'?t='+encodeURIComponent(TOK); dlSub.setAttribute('download',s.name); dlSub.style.display='flex'; }
+    if(v){ dlVideo.href=BASE_URL+v.url+'?t='+encodeURIComponent(TOK); dlVideo.setAttribute('download',v.name); dlVideo.classList.add('show'); dlVideo.style.display='flex'; }
+    if(s){ dlSub.href=BASE_URL+s.url+'?t='+encodeURIComponent(TOK); dlSub.setAttribute('download',s.name); dlSub.classList.add('show'); dlSub.style.display='flex'; }
+    if(!v && !s){ rStatus.textContent='Видео не найдено'; }
     setTimeout(()=>dlVideo.scrollIntoView({behavior:'smooth',block:'center'}),300);
   }catch(e){
-    rStatus.textContent='Ошибка: '+e.message;
+    clearTimeout(timer);
+    if(e.name==='AbortError'){ rStatus.textContent='Сервер не ответил (таймаут 90с). Попробуйте ещё раз'; }
+    else { rStatus.textContent='Ошибка: '+e.message; }
     rBar.style.width='100%';
   }finally{
     goBtn.disabled=false;
   }
+});
+
+// === Очистка метаданных (watermarks-remover :8765) ===
+const WM_URL = 'http://127.0.0.1:8765';
+const cleanBtn = document.getElementById('clean-btn');
+const cleanFile = document.getElementById('clean-file');
+cleanBtn.addEventListener('click', () => cleanFile.click());
+cleanFile.addEventListener('change', async () => {
+  const file = cleanFile.files[0];
+  if (!file) return;
+  cleanBtn.disabled = true;
+  const old = cleanBtn.textContent;
+  cleanBtn.textContent = '🧹 Очищаем…';
+  try {
+    const buf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const resp = await fetch(WM_URL + '/clean', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: b64, name: file.name })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'clean failed');
+    const bin = atob(data.cleaned);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' });
+    const a = document.createElement('a');
+    const cleanName = file.name.replace(/(\.[^.]+)$/, '.clean$1');
+    a.href = URL.createObjectURL(blob);
+    a.download = cleanName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    cleanBtn.textContent = '✅ Готово — скачано';
+    setTimeout(() => { cleanBtn.textContent = old; }, 3000);
+  } catch (e) {
+    cleanBtn.textContent = '❌ ' + (e.message || 'ошибка');
+    setTimeout(() => { cleanBtn.textContent = old; }, 4000);
+  } finally {
+    cleanBtn.disabled = false;
+    cleanFile.value = '';
+}
 });
 </script>
 </body>
